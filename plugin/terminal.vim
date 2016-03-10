@@ -85,16 +85,14 @@ endfunction
 
 function! CycleThroughHistory(direction)
     call s:IncrementHistoryPosition(a:direction)
-    echo s:historyPosition
-    call setline('.', GetHistory(s:historyPosition))
+    call setline('.', s:GetHistory(s:historyPosition))
 endfunction
 
 function! s:GetHistory(number)
-    if a:number < (len(s:history))
+    if a:number < (len(s:history)) && a:number >= 0
         return getline(s:history[(-1 - a:number)])
     else
-        echo 'should not happen'
-        return 0
+        return ''
     endif
 endfunction
 
