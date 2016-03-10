@@ -1,17 +1,27 @@
 
-function! s:OpenShell()
-    :enew
-    "et nowrite
-    nnore <silent> <buffer> <CR> :call RunLine(line('.'))<CR>
-    nnore <silent> <buffer> <Up> :call CycleThroughHistory(1)<CR>
-    nnore <silent> <buffer> <Down> :call CycleThroughHistory(-1)<CR>
+function! s:Terminal(command)
+    if len(a:command)
+        call s:RunInlineCommand(a:command)
+    else
+        :enew
+        "et nowrite
+        nnore <silent> <buffer> <CR> :call RunLine(line('.'))<CR>
+        nnore <silent> <buffer> <Up> :call CycleThroughHistory(1)<CR>
+        nnore <silent> <buffer> <Down> :call CycleThroughHistory(-1)<CR>
+    endif
 endfunction
 
-com! Terminal :call s:OpenShell()
+com! -complete=shellcmd -nargs=? Terminal :call s:Terminal('<args>')
 
 function! s:RunCommand(command)
     set shell=/bin/bash\ -i
     execute ":$r ! " . a:command
+    set shell=/bin/bash
+endfunction
+
+function! s:RunInlineCommand(command)
+    set shell=/bin/bash\ -i
+    execute ":r ! " . a:command
     set shell=/bin/bash
 endfunction
 
