@@ -1,27 +1,54 @@
-
-function! s:Terminal(command)
+function! s:Vimshell(command)
     if len(a:command)
         call s:RunInlineCommand(a:command)
     else
         :enew
-        "et nowrite
+        let b:isShell = 1
+        autocmd TextChanged,TextChangedI * :call s:AddPromptToLine()
+
         nnore <silent> <buffer> <CR> :call RunLine(line('.'))<CR>
         nnore <silent> <buffer> <Up> :call CycleThroughHistory(1)<CR>
         nnore <silent> <buffer> <Down> :call CycleThroughHistory(-1)<CR>
+
+        inore <silent> <buffer> <CR> :call RunLine(line('.'))<CR>
+        inore <silent> <buffer> <Up> :call CycleThroughHistory(1)<CR>
+        inore <silent> <buffer> <Down> :call CycleThroughHistory(-1)<CR>
+
+        call s:AddPromptToLine()
     endif
 endfunction
 
-com! -complete=shellcmd -nargs=? Terminal :call s:Terminal('<args>')
+com! -complete=shellcmd -nargs=? Vimshell :call s:Vimshell('<args>')
+
+function! s:MakePromt()
+    return 'vim-shell>'
+endfunction
+
+function! s:AddPromptToLine()
+    if exists('b:isShell') && b:isShell
+        let line = getline('.')
+        if line !~ s:MakePromt() 
+            call s:SetLine(line)
+        endif
+    endif
+endfunction
+
 
 function! s:RunCommand(command)
     set shell=/bin/bash\ -i
-    execute ":$r ! " . a:command
+    "execute ":$r ! " . a:command
+
+    let resultOneline = system(a:command)
+    let result = split(resultOneline, "\n")
+    call append('.', result)
+    normal G
     set shell=/bin/bash
 endfunction
 
 function! s:RunInlineCommand(command)
     set shell=/bin/bash\ -i
     execute ":r ! " . a:command
+    normal o
     set shell=/bin/bash
 endfunction
 
@@ -37,30 +64,41 @@ function! s:PrintDivider(lineNumber)
     execute "normal o" . s:MakeDivider(winwidth(0) - len(a:lineNumber) - 3)
 endfunction
 
-function! s:PrintCommand(lineNumber)
-    call s:PrintDivider(a:lineNumber)
-    call s:RunCommand(getline(a:lineNumber))
-    call s:PrintDivider(a:lineNumber)
+function! s:GetCommandFromLineNumber(lineNumber)
+    let commandLine = getline(a:lineNumber)
+    if commandLine =~ s:MakePromt() 
+        return s:Trim(split(commandLine, '>', 2)[1])
+    else
+        return s:Trim(commandLine)
+    endif
+endfunction
+
+function! s:Trim(string)
+    return substitute(a:string, '^\s*\(.\{-}\)\s*$', '\1', '')
+endfunction
+
+function! s:PrintCommand(lineNumber, command)
+    call s:RunCommand(a:command)
     normal o
-    normal o
+    call s:SetLine('')
 endfunction
 
 
 function! RunLine(lineNumber)
-    let command = getline(a:lineNumber)
+    let command = s:GetCommandFromLineNumber(a:lineNumber)
     if !len(command)
+        normal o
         return
     endif
 
     call s:SetHistoryPosition(-1)
-    call s:AddToHistory(a:lineNumber)
-    call s:PrintCommand(a:lineNumber)
-
+    call s:AddToHistory(command)
+    call s:PrintCommand(a:lineNumber, command)
 endfunction
 
 let s:history = []
-function! s:AddToHistory(lineNumber)
-    call add(s:history, getline(a:lineNumber))
+function! s:AddToHistory(line)
+    call add(s:history, a:line)
 endfunction
 
 let s:historyPosition = 0
@@ -85,7 +123,12 @@ endfunction
 
 function! CycleThroughHistory(direction)
     call s:IncrementHistoryPosition(a:direction)
-    call setline('.', s:GetHistory(s:historyPosition))
+    call s:SetLine(s:GetHistory(s:historyPosition))
+endfunction
+
+function! s:SetLine(line)
+    call setline('.', s:MakePromt() . "  " . a:line)
+    normal A
 endfunction
 
 function! s:GetHistory(number)
