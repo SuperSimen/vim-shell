@@ -60,7 +60,7 @@ endfunction
 
 let s:history = []
 function! s:AddToHistory(lineNumber)
-    call add(s:history, a:lineNumber)
+    call add(s:history, getline(a:lineNumber))
 endfunction
 
 let s:historyPosition = 0
@@ -90,7 +90,7 @@ endfunction
 
 function! s:GetHistory(number)
     if a:number < (len(s:history)) && a:number >= 0
-        return getline(s:history[(-1 - a:number)])
+        return s:history[(-1 - a:number)]
     else
         return ''
     endif
