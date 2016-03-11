@@ -48,22 +48,30 @@ endfunction
 let s:override = ['cd']
 
 function! s:Runcd(splitCommand)
-    let command = ":lcd " . join(a:splitCommand[1:-1])
-    execute command
+    try
+        let command = ":lcd " . join(a:splitCommand[1:-1])
+        execute command
+        return []
+    catch
+        return [v:exception]
+    endtry
 endfunction
 
 function! s:RunCommand(command)
 
     let splitCommand = split(a:command)
     if index(s:override, splitCommand[0]) != -1
-        call s:RunOverride(splitCommand)
+        let result = s:RunOverride(splitCommand)
     else
         set shell=/bin/bash\ -i
         let resultOneline = system(a:command)
         let result = split(resultOneline, "\n")
+        set shell=/bin/bash
+    endif
+
+    if len(result) > 0
         call append('$', result)
         normal G
-        set shell=/bin/bash
     endif
 
 endfunction
