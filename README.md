@@ -1,8 +1,8 @@
-# vim-terminal
+# vim-shell
 
-Terminal emulator for Vim. Run `:Vimshell` to open a new terminal. Press enter to run the command line under the cursor. Use up and down to cycle through command history.
+Terminal emulator for Vim. Run `:Vimshell` to open a new shell. Press enter to run the command line under the cursor. Use up and down to cycle through command history.
 
-`:Vimshell` also takes arguments. If run with arguments it will not start a separate terminal but print the result into the current buffer.
+`:Vimshell` also takes arguments. If run with arguments it will not start a separate shell but print the result into the current buffer.
 
 ```shell
 :Vimshell ls -F | grep /

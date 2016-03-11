@@ -2,47 +2,76 @@ function! s:Vimshell(command)
     if len(a:command)
         call s:RunInlineCommand(a:command)
     else
-        :enew
-        let b:isShell = 1
-        autocmd TextChanged,TextChangedI * :call s:AddPromptToLine()
-
-        nnore <silent> <buffer> <CR> :call RunLine(line('.'))<CR>
-        nnore <silent> <buffer> <Up> :call CycleThroughHistory(1)<CR>
-        nnore <silent> <buffer> <Down> :call CycleThroughHistory(-1)<CR>
-
-        inore <silent> <buffer> <CR> :call RunLine(line('.'))<CR>
-        inore <silent> <buffer> <Up> :call CycleThroughHistory(1)<CR>
-        inore <silent> <buffer> <Down> :call CycleThroughHistory(-1)<CR>
-
-        call s:AddPromptToLine()
+        call s:SetupNewShell()
     endif
+endfunction
+
+function! s:SetupNewShell()
+    :enew
+    let b:isShell = 1
+    autocmd TextChanged,TextChangedI * :call s:AddPromptToLine()
+
+    nnore <silent> <buffer> <CR> :call RunLine(line('.'), 0)<CR>
+    nnore <silent> <buffer> <Up> :call CycleThroughHistory(1)<CR>
+    nnore <silent> <buffer> <Down> :call CycleThroughHistory(-1)<CR>
+
+    inore <silent> <buffer> <CR> :call RunLine(line('.'), 1)<CR>
+    inore <silent> <buffer> <Up> :call CycleThroughHistory(1)<CR>
+    inore <silent> <buffer> <Down> :call CycleThroughHistory(-1)<CR>
+
+    call s:AddPromptToLine()
 endfunction
 
 com! -complete=shellcmd -nargs=? Vimshell :call s:Vimshell('<args>')
 
-function! s:MakePromt()
-    return 'vim-shell>'
+function! s:BasePrompt()
+    return 'vim-shell'
+endfunction
+
+function! s:MakePrompt()
+    return "[" . s:BasePrompt() . " " . fnamemodify(getcwd(), ':~') . ']'
 endfunction
 
 function! s:AddPromptToLine()
     if exists('b:isShell') && b:isShell
         let line = getline('.')
-        if line !~ s:MakePromt() 
+        let prevLineNumber = prevnonblank('.')
+        let prevLine = getline(prevLineNumber)
+
+        if line !~ s:BasePrompt() && (prevLine =~ s:BasePrompt() || prevLineNumber == 0)
             call s:SetLine(line)
         endif
     endif
 endfunction
 
 
-function! s:RunCommand(command)
-    set shell=/bin/bash\ -i
-    "execute ":$r ! " . a:command
+let s:override = ['cd']
 
-    let resultOneline = system(a:command)
-    let result = split(resultOneline, "\n")
-    call append('.', result)
-    normal G
-    set shell=/bin/bash
+function! s:Runcd(splitCommand)
+    let command = ":lcd " . join(a:splitCommand[1:-1])
+    execute command
+endfunction
+
+function! s:RunCommand(command)
+
+    let splitCommand = split(a:command)
+    if index(s:override, splitCommand[0]) != -1
+        call s:RunOverride(splitCommand)
+    else
+        set shell=/bin/bash\ -i
+        let resultOneline = system(a:command)
+        let result = split(resultOneline, "\n")
+        call append('$', result)
+        normal G
+        set shell=/bin/bash
+    endif
+
+endfunction
+
+function! s:RunOverride(splitCommand)
+    if index(s:override, a:splitCommand[0]) != -1
+        return function('s:Run' . a:splitCommand[0])(a:splitCommand)
+    endif
 endfunction
 
 function! s:RunInlineCommand(command)
@@ -66,10 +95,10 @@ endfunction
 
 function! s:GetCommandFromLineNumber(lineNumber)
     let commandLine = getline(a:lineNumber)
-    if commandLine =~ s:MakePromt() 
-        return s:Trim(split(commandLine, '>', 2)[1])
+    if commandLine =~ s:BasePrompt() 
+        return s:Trim(split(commandLine, ']', 2)[1])
     else
-        return s:Trim(commandLine)
+        return ''
     endif
 endfunction
 
@@ -84,10 +113,14 @@ function! s:PrintCommand(lineNumber, command)
 endfunction
 
 
-function! RunLine(lineNumber)
+function! RunLine(lineNumber, isInsertMode)
     let command = s:GetCommandFromLineNumber(a:lineNumber)
     if !len(command)
-        normal o
+        if a:isInsertMode
+            execute "normal! i"
+        else
+            execute "normal! "
+        endif
         return
     endif
 
@@ -127,7 +160,12 @@ function! CycleThroughHistory(direction)
 endfunction
 
 function! s:SetLine(line)
-    call setline('.', s:MakePromt() . "  " . a:line)
+    if len(a:line) > 0
+        let completeLine = s:MakePrompt() . " " . a:line
+    else
+        let completeLine = s:MakePrompt() . "  "
+    endif
+    call setline('.', completeLine)
     normal A
 endfunction
 
