@@ -164,6 +164,7 @@ endfunction
 
 function! CycleThroughHistory(direction)
     call s:IncrementHistoryPosition(a:direction)
+    normal G
     call s:SetLine(s:GetHistory(s:historyPosition))
 endfunction
 
