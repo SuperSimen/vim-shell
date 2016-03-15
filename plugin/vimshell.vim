@@ -76,6 +76,12 @@ function! s:RunCommand(command)
 
 endfunction
 
+function! PrintLine(line)
+    if exists('b:isShell') && b:isShell
+        call append('$', a:line)
+    endif
+endfunction
+
 function! s:RunOverride(splitCommand)
     if index(s:override, a:splitCommand[0]) != -1
         return function('s:Run' . a:splitCommand[0])(a:splitCommand)
@@ -164,13 +170,18 @@ endfunction
 
 function! CycleThroughHistory(direction)
     call s:IncrementHistoryPosition(a:direction)
-    normal G
+    normal Go
     call s:SetLine(s:GetHistory(s:historyPosition))
+endfunction
+
+function! GetServername()
+    let servername = system('tr "\0" " " </proc/' . getpid() . '/cmdline')
+    echo servername
 endfunction
 
 function! s:SetLine(line)
     if len(a:line) > 0
-        let completeLine = s:MakePrompt() . " " . a:line
+        let completeLine = s:MakePrompt() . " " . a:line . " "
     else
         let completeLine = s:MakePrompt() . "  "
     endif
