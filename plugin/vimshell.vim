@@ -1,14 +1,16 @@
 function! s:Vimshell(command)
-    if len(a:command)
-        call s:RunInlineCommand(a:command)
-    else
-        call s:SetupNewShell()
-    endif
+    call s:SetupNewShell(a:command)
+
 endfunction
 
-function! s:SetupNewShell()
+function! s:SetupNewShell(command)
     :enew
     let b:isShell = 1
+
+    if len(a:command)
+        call s:SetWorkingDirectory(a:command)
+    endif
+
     autocmd TextChanged,TextChangedI * :call s:AddPromptToLine()
 
     nnore <silent> <buffer> <CR> :call RunLine(line('.'), 0)<CR>
@@ -22,7 +24,7 @@ function! s:SetupNewShell()
     call s:AddPromptToLine()
 endfunction
 
-com! -complete=shellcmd -nargs=? Vimshell :call s:Vimshell('<args>')
+com! -complete=file -nargs=? Vimshell :call s:Vimshell('<args>')
 
 function! s:BasePrompt()
     return 'vim-shell'
@@ -86,6 +88,10 @@ function! s:RunOverride(splitCommand)
     if index(s:override, a:splitCommand[0]) != -1
         return function('s:Run' . a:splitCommand[0])(a:splitCommand)
     endif
+endfunction
+
+function! s:SetWorkingDirectory(directory)
+    execute ':lcd ' . a:directory
 endfunction
 
 function! s:RunInlineCommand(command)
@@ -170,7 +176,7 @@ endfunction
 
 function! CycleThroughHistory(direction)
     call s:IncrementHistoryPosition(a:direction)
-    normal Go
+    normal G
     call s:SetLine(s:GetHistory(s:historyPosition))
 endfunction
 
