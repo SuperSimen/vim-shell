@@ -5,6 +5,7 @@ endfunction
 
 function! s:SetupNewShell(command)
     :enew
+    :set buftype=nofile
     let b:isShell = 1
 
     if len(a:command)
